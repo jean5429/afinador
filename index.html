@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Musician's Hub: Metrônomo e Afinador</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .tab-active {
+            background-color: #4f46e5;
+            color: white;
+            font-weight: 600;
+        }
+
+        .tab-inactive {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+        
+        @keyframes beatFlash {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(255, 255, 255, 0); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .beat-indicator {
+            transition: background-color 0.05s ease-out, transform 0.05s ease-out;
+        }
+
+        .beat-flash-accent {
+            background-color: #6366f1;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px #6366f1;
+        }
+        
+        .beat-flash-regular {
+            background-color: #a78bfa;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px #a78bfa;
+        }
+        
+        .tuner-note-base {
+            transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+        }
+        
+        .tuner-out-of-tune {
+            background-color: #b91c1c;
+            color: #fecaca;
+        }
+        
+        .tuner-in-tune {
+            background-color: #16a34a;
+            color: #dcfce7;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 to-indigo-900 min-h-screen text-gray-200 flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-gray-800 bg-opacity-80 backdrop-blur-sm shadow-2xl rounded-xl overflow-hidden border border-gray-700">
+        
+        <header class="p-6 border-b border-gray-700">
+            <h1 class="text-3xl font-bold text-center text-white">Musician's Hub</h1>
+            <p class="text-center text-indigo-300">Seu Metrônomo e Afinador</p>
+        </header>
+        
+        <nav class="flex">
+            <button id="tabMetronome" class="w-1/2 p-4 text-center text-lg transition-all duration-300 tab-active">
+                Metrônomo
+            </button>
+            <button id="tabTuner" class="w-1/2 p-4 text-center text-lg transition-all duration-300 tab-inactive">
+                Afinador
+            </button>
+        </nav>
+        
+        <main>
+            
+            <div id="viewMetronome" class="p-6 space-y-6">
+                
+                <div class="flex justify-center items-center h-32">
+                    <div id="beatIndicator" class="w-24 h-24 bg-gray-700 rounded-full border-4 border-gray-600 flex items-center justify-center beat-indicator">
+                        <span id="beatCountDisplay" class="text-5xl font-bold text-white">0</span>
+                    </div>
+                </div>
+                
+                
+                <div class="text-center">
+                    <span id="bpmDisplay" class="text-7xl font-bold text-white">120</span>
+                    <span class="text-2xl text-gray-400">BPM</span>
+                </div>
+                
+                
+                <div class="space-y-2">
+                    <label for="bpmSlider" class="text-sm font-medium text-indigo-300">Tempo (40 - 240 BPM)</label>
+                    <input id="bpmSlider" type="range" min="40" max="240" value="120" class="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg accent-indigo-500">
+                </div>
+                
+                
+                <div class="flex gap-4">
+                    <div class="w-1/2 space-y-2">
+                        <label for="bpmInput" class="text-sm font-medium text-indigo-300">BPM Exato</label>
+                        <input id="bpmInput" type="number" min="40" max="240" value="120" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-center text-lg font-semibold text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <div class="w-1/2 space-y-2">
+                        <label for="beatsPerMeasure" class="text-sm font-medium text-indigo-300">Compasso</label>
+                        <select id="beatsPerMeasure" class="w-full bg-gray-700 border border-gray-600 rounded-lg p-3 text-center text-lg font-semibold text-white focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                            <option value="1">1/4</option>
+                            <option value="2">2/4</option>
+                            <option value="3">3/4</option>
+                            <option value="4" selected>4/4</option>
+                            <option value="5">5/4</option>
+                            <option value="6">6/8</option>
+                            <option value="7">7/4</option>
+                            <option value="8">8/8</option>
+                        </select>
+                    </div>
+                </div>
+                
+                
+                <button id="startStopMetronome" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-2xl font-bold py-4 rounded-lg shadow-lg transition-all duration-300 transform active:scale-95">
+                    Start
+                </button>
+            </div>
+            
+            
+            <div id="viewTuner" class="p-6 space-y-6 hidden">
+                
+                <div id="tunerStatus" class="text-center text-yellow-400 p-3 bg-yellow-900 bg-opacity-50 rounded-lg">
+                    Clique em 'Iniciar Afinador' para permitir o uso do microfone.
+                </div>
+                
+                
+                <div class="flex justify-center items-center h-32">
+                    <div id="noteDisplay" class="w-full h-full flex items-center justify-center text-8xl font-black rounded-lg tuner-note-base tuner-out-of-tune">
+                        --
+                    </div>
+                </div>
+                
+                
+                <div class="text-center space-y-2">
+                    <div id="freqDisplay" class="text-3xl font-semibold text-white">
+                        --- Hz
+                    </div>
+                    <div id="octaveDisplay" class="text-xl text-gray-400">
+                        Oitava: -
+                    </div>
+                </div>
+
+                
+                <div class="w-full bg-gray-700 rounded-full h-4 relative overflow-hidden">
+                    <div id="centsBar" class="absolute top-0 left-1/2 h-4 w-1 bg-white z-10 -ml-0.5"></div>
+                    <div id="centsIndicator" class="absolute top-0 h-full bg-gradient-to-r from-red-500 via-green-500 to-red-500 transition-transform duration-75" style="width: 200%; transform: translateX(-50%);">
+                        
+                    </div>
+                </div>
+                
+                
+                <button id="startStopTuner" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-2xl font-bold py-4 rounded-lg shadow-lg transition-all duration-300 transform active:scale-95">
+                    Iniciar Afinador
+                </button>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            
+            let audioContext;
+            
+            
+            const tabMetronome = document.getElementById('tabMetronome');
+            const tabTuner = document.getElementById('tabTuner');
+            const viewMetronome = document.getElementById('viewMetronome');
+            const viewTuner = document.getElementById('viewTuner');
+            
+            
+            const bpmSlider = document.getElementById('bpmSlider');
+            const bpmInput = document.getElementById('bpmInput');
+            const bpmDisplay = document.getElementById('bpmDisplay');
+            const beatsPerMeasureSelect = document.getElementById('beatsPerMeasure');
+            const startStopMetronome = document.getElementById('startStopMetronome');
+            const beatIndicator = document.getElementById('beatIndicator');
+            const beatCountDisplay = document.getElementById('beatCountDisplay');
+            
+            
+            let isMetronomeRunning = false;
+            let currentBPM = 120;
+            let beatsPerMeasure = 4;
+            let currentBeat = 0;
+            let metronomeTimer = null;
+
+            
+            const startStopTuner = document.getElementById('startStopTuner');
+            const tunerStatus = document.getElementById('tunerStatus');
+            const noteDisplay = document.getElementById('noteDisplay');
+            const freqDisplay = document.getElementById('freqDisplay');
+            const octaveDisplay = document.getElementById('octaveDisplay');
+            const centsIndicator = document.getElementById('centsIndicator');
+            
+            
+            let isTunerRunning = false;
+            let mediaStreamSource = null;
+            let analyserNode = null;
+            let tunerRafId = null; 
+            let pitchBuffer;
+            const noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+            const A4 = 440;
+
+            
+            
+            function showView(viewToShow) {
+                if (viewToShow === 'metronome') {
+                    viewMetronome.classList.remove('hidden');
+                    viewTuner.classList.add('hidden');
+                    tabMetronome.classList.add('tab-active');
+                    tabMetronome.classList.remove('tab-inactive');
+                    tabTuner.classList.add('tab-inactive');
+                    tabTuner.classList.remove('tab-active');
+                    
+                    if (isTunerRunning) stopTuner();
+                } else {
+                    viewTuner.classList.remove('hidden');
+                    viewMetronome.classList.add('hidden');
+                    tabTuner.classList.add('tab-active');
+                    tabTuner.classList.remove('tab-inactive');
+                    tabMetronome.classList.add('tab-inactive');
+                    tabMetronome.classList.remove('tab-active');
+                    
+                    if (isMetronomeRunning) stopMetronome();
+                }
+            }
+            
+            tabMetronome.addEventListener('click', () => showView('metronome'));
+            tabTuner.addEventListener('click', () => showView('tuner'));
+
+            
+            function initAudioContext() {
+                if (!audioContext) {
+                    try {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    } catch (e) {
+                        console.error("AudioContext não é suportado.", e);
+                        alert("Seu navegador não suporta a API de Áudio necessária.");
+                    }
+                }
+            }
+
+            
+            
+
+            function updateBPM(newBpm) {
+                currentBPM = parseInt(newBpm, 10);
+                if (isNaN(currentBPM)) currentBPM = 120;
+                if (currentBPM > 240) currentBPM = 240;
+                if (currentBPM < 40) currentBPM = 40;
+                
+                bpmSlider.value = currentBPM;
+                bpmInput.value = currentBPM;
+                bpmDisplay.textContent = currentBPM;
+                
+                
+                if (isMetronomeRunning) {
+                    stopMetronome();
+                    startMetronome();
+                }
+            }
+            
+            bpmSlider.addEventListener('input', (e) => updateBPM(e.target.value));
+            bpmInput.addEventListener('input', (e) => updateBPM(e.target.value));
+            beatsPerMeasureSelect.addEventListener('change', (e) => {
+                beatsPerMeasure = parseInt(e.target.value, 10);
+                currentBeat = 0; 
+                beatCountDisplay.textContent = currentBeat;
+            });
+            
+            startStopMetronome.addEventListener('click', () => {
+                if (isMetronomeRunning) {
+                    stopMetronome();
+                } else {
+                    initAudioContext(); 
+                    startMetronome();
+                }
+            });
+
+            function startMetronome() {
+                isMetronomeRunning = true;
+                startStopMetronome.textContent = "Stop";
+                startStopMetronome.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                startStopMetronome.classList.add('bg-red-600', 'hover:bg-red-700');
+                
+                currentBeat = 0;
+                const interval = (60 / currentBPM) * 1000; 
+                
+                playTick(); 
+                metronomeTimer = setInterval(playTick, interval);
+            }
+            
+            function stopMetronome() {
+                isMetronomeRunning = false;
+                startStopMetronome.textContent = "Start";
+                startStopMetronome.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                startStopMetronome.classList.remove('bg-red-600', 'hover:bg-red-700');
+                
+                clearInterval(metronomeTimer);
+                metronomeTimer = null;
+                beatCountDisplay.textContent = "0";
+                beatIndicator.classList.remove('beat-flash-accent', 'beat-flash-regular');
+            }
+            
+            function playTick() {
+                if (!audioContext) return;
+
+                currentBeat = (currentBeat % beatsPerMeasure) + 1;
+                beatCountDisplay.textContent = currentBeat;
+                
+                
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                
+                
+                const freq = (currentBeat === 1) ? 1000 : 800;
+                
+                osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+                osc.type = 'triangle'; 
+                
+                gain.gain.setValueAtTime(1, audioContext.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.05);
+                
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                
+                osc.start(audioContext.currentTime);
+                osc.stop(audioContext.currentTime + 0.05);
+
+                
+                beatIndicator.classList.remove('beat-flash-accent', 'beat-flash-regular');
+                
+                void beatIndicator.offsetWidth; 
+                
+                if (currentBeat === 1) {
+                    beatIndicator.classList.add('beat-flash-accent');
+                } else {
+                    beatIndicator.classList.add('beat-flash-regular');
+                }
+                
+                
+                setTimeout(() => {
+                     beatIndicator.classList.remove('beat-flash-accent', 'beat-flash-regular');
+                }, 100);
+            }
+
+            
+            
+
+            startStopTuner.addEventListener('click', () => {
+                if (isTunerRunning) {
+                    stopTuner();
+                } else {
+                    startTuner();
+                }
+            });
+
+            async function startTuner() {
+                try {
+                    initAudioContext();
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    mediaStreamSource = audioContext.createMediaStreamSource(stream);
+                    analyserNode = audioContext.createAnalyser();
+                    analyserNode.fftSize = 4096; 
+                    
+                    pitchBuffer = new Float32Array(analyserNode.fftSize);
+                    
+                    mediaStreamSource.connect(analyserNode);
+                    
+                    isTunerRunning = true;
+                    tunerStatus.textContent = "Escutando...";
+                    tunerStatus.classList.remove('bg-yellow-900', 'text-yellow-400', 'bg-red-900', 'text-red-300');
+                    tunerStatus.classList.add('bg-green-900', 'text-green-300');
+                    startStopTuner.textContent = "Parar Afinador";
+                    startStopTuner.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+                    startStopTuner.classList.add('bg-red-600', 'hover:bg-red-700');
+                    
+                    detectPitch();
+                    
+                } catch (err) {
+                    console.error("Erro ao iniciar o afinador:", err);
+                    tunerStatus.textContent = "Erro: Permissão do microfone negada.";
+                    tunerStatus.classList.remove('bg-yellow-900', 'text-yellow-400', 'bg-green-900', 'text-green-300');
+                    tunerStatus.classList.add('bg-red-900', 'text-red-300');
+                    isTunerRunning = false;
+                }
+            }
+
+            function stopTuner() {
+                if (tunerRafId) {
+                    cancelAnimationFrame(tunerRafId);
+                    tunerRafId = null;
+                }
+                
+                if (mediaStreamSource) {
+                    mediaStreamSource.stream.getTracks().forEach(track => track.stop());
+                    mediaStreamSource.disconnect();
+                    mediaStreamSource = null;
+                }
+                
+                isTunerRunning = false;
+                tunerStatus.textContent = "Afinador parado. Clique para iniciar.";
+                tunerStatus.classList.add('bg-yellow-900', 'text-yellow-400');
+                tunerStatus.classList.remove('bg-green-900', 'text-green-300', 'bg-red-900', 'text-red-300');
+                startStopTuner.textContent = "Iniciar Afinador";
+                startStopTuner.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+                startStopTuner.classList.remove('bg-red-600', 'hover:bg-red-700');
+                
+                
+                noteDisplay.textContent = "--";
+                freqDisplay.textContent = "--- Hz";
+                octaveDisplay.textContent = "Oitava: -";
+                noteDisplay.classList.add('tuner-out-of-tune');
+                noteDisplay.classList.remove('tuner-in-tune');
+                centsIndicator.style.transform = `translateX(-50%)`;
+            }
+
+            function detectPitch() {
+                if (!isTunerRunning || !analyserNode) return;
+                
+                analyserNode.getFloatTimeDomainData(pitchBuffer);
+                const freq = autoCorrelate(pitchBuffer, audioContext.sampleRate);
+
+                if (freq > 0) {
+                    
+                    const noteData = getNoteData(freq);
+                    
+                    noteDisplay.textContent = noteData.noteName;
+                    freqDisplay.textContent = `${freq.toFixed(2)} Hz`;
+                    octaveDisplay.textContent = `Oitava: ${noteData.octave}`;
+                    
+                    
+                    const centsOff = noteData.centsOff;
+                    if (Math.abs(centsOff) < 5) { 
+                        noteDisplay.classList.add('tuner-in-tune');
+                        noteDisplay.classList.remove('tuner-out-of-tune');
+                    } else {
+                        noteDisplay.classList.add('tuner-out-of-tune');
+                        noteDisplay.classList.remove('tuner-in-tune');
+                    }
+
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    const clampedCents = Math.max(-50, Math.min(50, centsOff));
+                    const transformPercent = (clampedCents + 50); 
+                    
+                    
+                    centsIndicator.style.transform = `translateX(${-50 + clampedCents}%)`;
+
+
+                } else {
+                    
+                    noteDisplay.textContent = "--";
+                    freqDisplay.textContent = "--- Hz";
+                    octaveDisplay.textContent = "Oitava: -";
+                    noteDisplay.classList.add('tuner-out-of-tune');
+                    noteDisplay.classList.remove('tuner-in-tune');
+                    centsIndicator.style.transform = `translateX(-50%)`;
+                }
+                
+                tunerRafId = requestAnimationFrame(detectPitch);
+            }
+
+            function getNoteData(frequency) {
+                const noteNum = 12 * (Math.log(frequency / A4) / Math.log(2));
+                const roundedNoteNum = Math.round(noteNum);
+                const noteIndex = (roundedNoteNum + 69) % 12; 
+                const noteName = noteStrings[noteIndex];
+                const octave = Math.floor((roundedNoteNum + 69) / 12);
+                
+                
+                const expectedFreq = A4 * Math.pow(2, roundedNoteNum / 12);
+                const centsOff = 1200 * Math.log(frequency / expectedFreq) / Math.log(2);
+                
+                return {
+                    noteName: noteName,
+                    octave: octave,
+                    centsOff: centsOff
+                };
+            }
+
+            
+            
+            function autoCorrelate(buffer, sampleRate) {
+                const SIZE = buffer.length;
+                let rms = 0;
+
+                for (let i = 0; i < SIZE; i++) {
+                    const val = buffer[i];
+                    rms += val * val;
+                }
+                rms = Math.sqrt(rms / SIZE);
+                if (rms < 0.01) return -1; 
+
+                let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+                for (let i = 0; i < SIZE / 2; i++) {
+                    if (Math.abs(buffer[i]) < thres) { r1 = i; break; }
+                }
+                for (let i = 1; i < SIZE / 2; i++) {
+                    if (Math.abs(buffer[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+                }
+
+                buffer = buffer.slice(r1, r2);
+                const newSize = buffer.length;
+
+                const c = new Array(newSize).fill(0);
+                for (let i = 0; i < newSize; i++) {
+                    for (let j = 0; j < newSize - i; j++) {
+                        c[i] = c[i] + buffer[j] * buffer[j + i];
+                    }
+                }
+
+                let d = 0;
+                while (c[d] > c[d + 1]) d++;
+                let maxval = -1, maxpos = -1;
+                for (let i = d; i < newSize; i++) {
+                    if (c[i] > maxval) {
+                        maxval = c[i];
+                        maxpos = i;
+                    }
+                }
+                
+                let T0 = maxpos;
+
+                
+                const x1 = c[T0 - 1], x2 = c[T0], x3 = c[T0 + 1];
+                const a = (x1 + x3 - 2 * x2) / 2;
+                const b = (x3 - x1) / 2;
+                if (a) T0 = T0 - b / (2 * a);
+
+                if (T0 === 0) return -1;
+                return sampleRate / T0;
+            }
+
+            
+            showView('metronome');
+        });
+    </script>
+</body>
+</html>
