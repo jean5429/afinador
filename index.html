@@ -210,11 +210,15 @@
             
             let isTunerRunning = false;
             let mediaStreamSource = null;
+            let mediaStream = null; 
             let analyserNode = null;
             let tunerRafId = null; 
             let pitchBuffer;
             const noteStrings = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
             const A4 = 440;
+
+            let smoothedFreq = 0;
+            const smoothingFactor = 0.1; 
 
             
             
@@ -247,13 +251,16 @@
             function initAudioContext() {
                 if (!audioContext) {
                     try {
-                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    } catch (e) {
-                        console.error("AudioContext não é suportado.", e);
-                        alert("Seu navegador não suporta a API de Áudio necessária.");
-                    }
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                } catch (e) {
+                    console.error("AudioContext não é suportado.", e);
+                    alert("Seu navegador não suporta a API de Áudio necessária.");
                 }
             }
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+        }
 
             
             
@@ -363,6 +370,7 @@
             
 
             startStopTuner.addEventListener('click', () => {
+                initAudioContext(); 
                 if (isTunerRunning) {
                     stopTuner();
                 } else {
@@ -373,8 +381,8 @@
             async function startTuner() {
                 try {
                     initAudioContext();
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                    mediaStreamSource = audioContext.createMediaStreamSource(stream);
+                    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                    mediaStreamSource = audioContext.createMediaStreamSource(mediaStream);
                     analyserNode = audioContext.createAnalyser();
                     analyserNode.fftSize = 4096; 
                     
@@ -407,13 +415,18 @@
                     tunerRafId = null;
                 }
                 
+                if (mediaStream) {
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    mediaStream = null;
+                }
+                
                 if (mediaStreamSource) {
-                    mediaStreamSource.stream.getTracks().forEach(track => track.stop());
                     mediaStreamSource.disconnect();
                     mediaStreamSource = null;
                 }
                 
                 isTunerRunning = false;
+                smoothedFreq = 0; 
                 tunerStatus.textContent = "Afinador parado. Clique para iniciar.";
                 tunerStatus.classList.add('bg-yellow-900', 'text-yellow-400');
                 tunerStatus.classList.remove('bg-green-900', 'text-green-300', 'bg-red-900', 'text-red-300');
@@ -438,10 +451,16 @@
 
                 if (freq > 0) {
                     
-                    const noteData = getNoteData(freq);
+                    if (smoothedFreq === 0) {
+                        smoothedFreq = freq;
+                    } else {
+                        smoothedFreq = smoothedFreq + (freq - smoothedFreq) * smoothingFactor;
+                    }
+                    
+                    const noteData = getNoteData(smoothedFreq); 
                     
                     noteDisplay.textContent = noteData.noteName;
-                    freqDisplay.textContent = `${freq.toFixed(2)} Hz`;
+                    freqDisplay.textContent = `${smoothedFreq.toFixed(2)} Hz`; 
                     octaveDisplay.textContent = `Oitava: ${noteData.octave}`;
                     
                     
@@ -469,6 +488,8 @@
 
 
                 } else {
+                    
+                    smoothedFreq = 0; 
                     
                     noteDisplay.textContent = "--";
                     freqDisplay.textContent = "--- Hz";
